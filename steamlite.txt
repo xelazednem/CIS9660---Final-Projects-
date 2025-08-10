@@ -11,11 +11,17 @@ import seaborn as sns
 ###_________________________________________________________________________________
 
 ### Streamlit Heading#####
-st.set_page_config(page_title="Project 1- Regression", layout="wide")
-st.set_page_config(page_title="Project 1 - Regression", layout="wide")
+st.set_page_config(page_title="CIS9660 - Final Projects", layout="wide")
 ###________________________________________________________________________________
 ### Import necessary datasets
+### Regression - Project 1
 df = pd.read_csv("Streamlit_dataset.csv")
+###Project 2 
+df_2024 = pd.read_csv("df_2024.csv")
+df_2024['sale_date'] = pd.to_datetime(df_2024['sale_date'], errors='coerce')
+d24 = df_2024[df_2024['sale_date'].dt.year == 2024].copy()
+
+
 
 ###______________________________________________________________
 # Sidebar navigation
@@ -23,10 +29,15 @@ st.set_page_config(page_title="Project 1- Regression", layout="wide")
 st.set_page_config(page_title="Project 1 - Regression", layout="wide")
 # Sidebar navigation
 section = st.sidebar.radio("Navigation", [
-    "Introduction",
+    "Introduction - Project 1 Regression",
     "Exploratory Analysis and Cleaning",
     "Regression - Total Price",
     "Regression - Total Units",
+    "Conclusion",
+    "Introduction - Project 2 Classification",
+    "MultiClassification Models",
+    "AI Agent",
+    "Unsupervised Learning Agent",
     "Conclusion",
 ])
 
@@ -41,6 +52,29 @@ r2_df = pd.DataFrame({
     "R² Score": [r2_raw, r2_log, r2_log10]
 })
 
+###_____________________________________________________________________________
+###Prep for visuals for project 2
+
+labels = ['Low', 'Medium', 'High', 'Very High']
+
+if 'price_category' not in df_2024.columns:
+  def quartiles_by_rank_safe(s):
+      out = pd.Series(pd.NA, index=s.index, dtype="object")
+      m = s.notna(); n = int(m.sum())
+      if n == 0: return out
+      r = s.rank(method='first')
+      if s[m].nunique() == 1:
+          out[m] = 'Medium'
+          return out
+      q = min(4, n)
+      out[m] = pd.qcut(r[m], q, labels=labels[:q], duplicates='drop').astype(str)
+      return out
+  df_2024['price_category'] = (
+      df_2024.groupby('borough', group_keys=False)['sale_price']
+              .apply(quartiles_by_rank_safe)
+  )
+  df_2024['price_category'] = pd.Categorical(df_2024['price_category'],
+                                              categories=labels, ordered=True)
 
 ###_____________________________________________________________________________
 ###Total Unit Regression model import 
@@ -391,7 +425,7 @@ elif section == "Conclusion":
         <div style='text-align: center;'>
             <h2>Commentary</h2>
             <p style='font-size:16px;'>
-            When performing any kind of analysis, it is important to remember that the analysis can only be as good as the data that was presented. Through a length cleaning
+            When performing any kind of analysis, it is important to remember that the analysis can only be as good as the data that was presented. Through a lengthy cleaning
             and engineering process. It was determined that given Total Price, the chosen features within this dataset were not a good predictors of price. 
             Based off this analysis the major reason features were not a statistically significant  indicator of price is due to the lack of correlation. 
             <br>
@@ -415,5 +449,104 @@ elif section == "Conclusion":
     correlation_matrix = df.corr(numeric_only=True)
     st.subheader("Correlation Matrix")
     st.dataframe(correlation_matrix.style.background_gradient(cmap='coolwarm').format(precision=2))
+
+
+###_____________________________________________________________________________
+### Opens the introduction to project 2 using HTML format 
+elif section == "Introduction - Project 2 Classification":
+    st.subheader("Introduction - Project 2 Classification")
+    st.markdown(
+        """
+        <div style='text-align: center;'>
+            <h2>Multi-model Classification Analysis</h2>
+            <p style='font-size:16px;'>
+            During the next section of this analysis a variation of the same data set will be used to complete multiple different kinds of classification analyses.
+            The first question, 6 different types of classification models will be used. The goal is to test which model is the most accurate at predicting the price level of a given building based on the borough its in.
+            The price levels are: Low, Medium, High, and Very High. Price levels are determined by the borough that the building is housed in. So each different borough has a a different threashhold on what each price level is.
+            The price level variable was engineered so that each bucket has 25% of the total 2024 sales per borough within it. 
+            <br>
+            <br>
+            <h2>AI Agent</h2>
+          </p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+###_____________________________________________________________________________
+elif section == "MultiClassification Models":
+    st.subheader("MultiClassification Models")
+    st.markdown(
+        """
+        <div style='text-align: center;'>
+            <h2>Multi-model Classification Analysis</h2>
+            <p style='font-size:16px;'>
+            Seven different models were deployed for this analysis: Logistic regression, naive bayes, decision trees, random forests, support vector machines (SVM),K-nearest Neighbors (KNN), and K means (Unsupersived).
+            For the purpose of this analysis, all models asides from K means will be compared to eachother. K-Means being excluded because it is an unsupervised. output labels are arbitrary clusters rather than the learned class labels.
+            For K-mean results please view the end of the page.  
+            <br>
+            For supervised learning, the following metrics are used to evaluate each model: accuracy, prevision, recall, and f1-score. 
+            <br>
+            For unsupervised learning, the metrics of evaluation will be Adjusted Random Index & Normalized Mutual Information.  
+
+          </p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    st.markdown("### Visual 1: Monthly sale volume by borough (2024)")
+
+    # Make sure sale_date is datetime
+    df_2024['sale_date'] = pd.to_datetime(df_2024['sale_date'], errors='coerce')
+
+    # Map borough IDs to names
+    BOROUGH_MAP = {1: 'Manhattan', 2: 'Bronx', 3: 'Brooklyn', 4: 'Queens', 5: 'Staten Island'}
+    df_2024['borough_name'] = (
+      pd.to_numeric(df_2024['borough'], errors='coerce')
+        .map(BOROUGH_MAP)
+        .fillna(df_2024['borough'].astype(str))
+    )
+
+    # Filter to 2024 only
+    d24 = df_2024[df_2024['sale_date'].dt.year == 2024].copy()
+
+    # Aggregate monthly counts by borough_name
+    monthly_counts = (
+      d24.groupby([d24['sale_date'].dt.to_period('M').astype(str), 'borough_name'])
+          .size()
+          .reset_index(name='count')
+          .rename(columns={'sale_date': 'month'})
+    )
+
+    # Build a complete 12-month list for x-axis
+    months = pd.period_range('2024-01', '2024-12', freq='M').astype(str)
+    borough_order = sorted(monthly_counts['borough_name'].unique())
+
+    # Plot
+    sns.set_style("whitegrid")
+    fig, ax = plt.subplots(figsize=(8,4))
+
+    sns.lineplot(
+      data=monthly_counts,
+      x='month', y='count',
+      hue='borough_name', hue_order=borough_order,
+      marker='o', ax=ax
+    )
+
+    # Set clean x-axis labels
+    ax.set_xticks(range(len(months)))
+    ax.set_xticklabels(months, rotation=45, ha='right')
+    ax.legend(
+      loc='best',
+      bbox_to_anchor=(0.5, -0.15),
+      ncol=len(borough_order),
+      frameon=False
+    )
+
+    plt.tight_layout()
+    st.pyplot(fig)
+      
+
+
 
 
