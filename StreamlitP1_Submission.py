@@ -13,7 +13,29 @@ from geopy.geocoders import Nominatim
 from geopy.distance import geodesic
 import math
 import os, requests
+from huggingface_hub import hf_hub_download
 ###_________________________________________________________________________________
+REPO_ID = "ZednemXela/CIS9660_Final_Project"   
+FILENAME = "df_2024.csv"                       
+REPO_TYPE = "dataset"
+###Caches the dataset for faster load times. 
+@st.cache_data(show_spinner="Downloading dataset from Hugging Face…")
+def load_df():  
+    local_path = hf_hub_download(
+        repo_id=REPO_ID,
+        filename=FILENAME,
+        repo_type=REPO_TYPE,
+        token=token
+    )
+    ### Read using the downloaded path (NOT just "df_2024.csv")
+    try:
+        df = pd.read_parquet(local_path)
+    except Exception:
+        df = pd.read_csv(local_path, low_memory=False)
+    return df, local_path
+
+df_2024, cache_path = load_df()
+st.write("Loaded from:", cache_path) 
 
 ### Streamlit Heading#####
 st.set_page_config(page_title="CIS9660 - Final Projects", layout="wide")
