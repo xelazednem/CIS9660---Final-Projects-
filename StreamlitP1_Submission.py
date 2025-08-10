@@ -20,12 +20,12 @@ FILENAME = "df_2024.csv"
 REPO_TYPE = "dataset"
 ###Caches the dataset for faster load times. 
 @st.cache_data(show_spinner="Downloading dataset from Hugging Face…")
-def load_df():  
+def load_df():
+    token = st.secrets.get("HF_TOKEN", None) 
     local_path = hf_hub_download(
         repo_id=REPO_ID,
         filename=FILENAME,
-        repo_type=REPO_TYPE,
-        token=token
+        repo_type=REPO_TYPE
     )
     ### Read using the downloaded path (NOT just "df_2024.csv")
     try:
