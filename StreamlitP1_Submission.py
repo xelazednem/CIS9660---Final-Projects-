@@ -14,6 +14,7 @@ from geopy.distance import geodesic
 import math
 import os, requests
 from huggingface_hub import hf_hub_download
+from openai import OpenAI
 ###_________________________________________________________________________________
 REPO_ID = "ZednemXela/df_2024"  
 FILENAME = "df_2024.csv"                       
@@ -37,6 +38,39 @@ def load_df():
 df_2024, cache_path = load_df()
 ### For dev, gives information on where the large dataset is loaded from. For submission this is commented out. 
 ### st.write("Loaded from:", cache_path) 
+###___________________________________________________________________________________
+### Open AI Helper Function
+def _openai_client():
+    key = st.secrets.get("OPENAI_API_KEY")
+    if not key:
+        raise RuntimeError("Missing OPENAI_API_KEY in Streamlit secrets.")
+    return OpenAI(api_key=key)
+
+def ai_summary_with_openai(neighborhood, wx, picks, shortlist, model="gpt-3.5-turbo"):
+    client = _openai_client()
+    system = (
+        "You are a concise food guide. Use the weather and the shortlist of nearby restaurants "
+        "to make 2–4 specific cuisine suggestions and a friendly rationale. "
+        "Keep it under 120 words. No markdown bullets—use short sentences."
+    )
+    user = (
+        f"Neighborhood: {neighborhood}\n"
+        f"Weather: {wx.get('description','?')}, {wx.get('temp_f','?')}°F, "
+        f"precip {wx.get('precip_in','?')} in, wind {wx.get('wind_mph','?')} mph.\n"
+        f"Suggested cuisines: {', '.join(picks) if picks else 'Any'}\n\n"
+        f"Nearby restaurants (name – cuisine – distance mi):\n{shortlist}"
+    )
+    resp = client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": system},
+            {"role": "user", "content": user}
+        ],
+        temperature=0.4,
+        max_tokens=240,
+    )
+    return resp.choices[0].message.content.strip()
+
 
 ### Streamlit Heading#####
 st.set_page_config(page_title="CIS9660 - Final Projects", layout="wide")
@@ -1024,9 +1058,9 @@ elif section == "AI Agent":
       ### Ask the hosted model (OpenRouter); fallback if key missing/unavailable
       try:
           with st.spinner("Asking the AI guide…"):
-              summary = ai_summary_with_openrouter(neighborhood, wx, picks, shortlist)
-          st.success("AI Summary")
-          st.write(summary)
+            summary = ai_summary_with_openai(neighborhood, wx, picks, shortlist)
+        st.success("AI Summary")
+        st.write(summary)
       except Exception:
           st.warning("AI service unavailable or no API key — showing a quick summary instead.")
           st.write(
