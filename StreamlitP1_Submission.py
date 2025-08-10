@@ -44,7 +44,6 @@ st.set_page_config(page_title="CIS9660 - Final Projects", layout="wide")
 ### Regression - Project 1
 df = pd.read_csv("Streamlit_dataset.csv")
 ###Project 2 - Classification  
-df_2024 = pd.read_csv("df_2024.csv")
 df_2024['sale_date'] = pd.to_datetime(df_2024['sale_date'], errors='coerce')
 d24 = df_2024[df_2024['sale_date'].dt.year == 2024].copy()
 ###______________________________________________________________________________
