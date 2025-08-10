@@ -1059,8 +1059,8 @@ elif section == "AI Agent":
       try:
           with st.spinner("Asking the AI guide…"):
             summary = ai_summary_with_openai(neighborhood, wx, picks, shortlist)
-        st.success("AI Summary")
-        st.write(summary)
+            st.success("AI Summary")
+            st.write(summary)
       except Exception:
           st.warning("AI service unavailable or no API key — showing a quick summary instead.")
           st.write(
