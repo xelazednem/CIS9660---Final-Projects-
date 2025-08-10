@@ -9,3 +9,4 @@ requests
 geopy
 huggingface-hub
 openpyxl
+openai>=1.0.0
