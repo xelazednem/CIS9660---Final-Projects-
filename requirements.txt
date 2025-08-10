@@ -8,3 +8,4 @@ joblib
 requests
 geopy
 huggingface-hub
+openpyxl
