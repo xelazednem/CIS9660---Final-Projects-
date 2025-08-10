@@ -35,7 +35,8 @@ def load_df():
     return df, local_path
 
 df_2024, cache_path = load_df()
-st.write("Loaded from:", cache_path) 
+### For dev, gives information on where the large dataset is loaded from. For submission this is commented out. 
+### st.write("Loaded from:", cache_path) 
 
 ### Streamlit Heading#####
 st.set_page_config(page_title="CIS9660 - Final Projects", layout="wide")
