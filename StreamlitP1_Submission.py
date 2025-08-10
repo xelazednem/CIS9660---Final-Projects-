@@ -46,7 +46,7 @@ def _openai_client():
         raise RuntimeError("Missing OPENAI_API_KEY in Streamlit secrets.")
     return OpenAI(api_key=key)
 
-def ai_summary_with_openai(neighborhood, wx, picks, shortlist, model="gpt-3.5-turbo"):
+def ai_summary_with_openai(neighborhood, wx, picks, shortlist, model="gpt-4o-mini"):
     client = _openai_client()
     system = (
         "You are a concise food guide. Use the weather and the shortlist of nearby restaurants "
