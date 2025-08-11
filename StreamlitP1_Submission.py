@@ -604,13 +604,11 @@ elif section == "Regression - Total Units":
         year_built,
         sale_price,
         units_per_sqft_pct,
-        net_sqft,
         borough_brooklyn,
         borough_manhattan,
         borough_queens,
         borough_staten_island,
         borough_the_bronx,
-        floor_area_ratio
     ]])
 
     input_scaled = scaler.transform(input_features)
