@@ -586,7 +586,7 @@ elif section == "Regression - Total Units":
     ### Adds user inputs with mins and maxes for each of the feature. 
     land_sqft = st.number_input("Land Square Feet", min_value=100.0, max_value=1_000_000.0, value=500.0, step = 1.0, key = "land_sqft")
     gross_default = min(1000.0, float(land_sqft))
-    gross_sqft = st.number_input("Gross Square Feet", min_value=100.0, max_value=float(land_sqft), value=gross_default, step = 1.0, key="gross_default")
+    gross_sqft = st.number_input("Gross Square Feet - cannot exceed land square feet value", min_value=100.0, max_value=float(land_sqft), value=gross_default, step = 1.0, key="gross_default")
     if gross_sqft > land_sqft:
         gross_sqft = land_sqft
     year_built = st.number_input("Year Built", min_value=1800, max_value=2025, value=2000)
