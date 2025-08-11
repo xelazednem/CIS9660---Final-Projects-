@@ -710,7 +710,7 @@ elif section == "Introduction - Project 2 Classification":
     st.markdown(
         """
         <div style='text-align: center;'>
-            <h2>Multi-model Classification Analysis</h2>
+            <h2>Multi-Model Classification Analysis</h2>
             <p style='font-size:16px;'>
             During the next section of this analysis a variation of the same data set will be used to complete multiple different kinds of classification analyses.
             6 different types of classification models will be used. The goal is to test which model is the most accurate at predicting the price level of a given building based on the borough it's in.
