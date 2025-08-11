@@ -584,11 +584,15 @@ elif section == "Regression - Total Units":
     model = joblib.load("multiple_linear_model.pkl")
 
     ### Adds user inputs with mins and maxes for each of the feature. 
-    gross_sqft = st.number_input("Gross Square Feet", min_value=100.0, max_value=1_000_000.0, value=1000.0)
-    land_sqft = st.number_input("Land Square Feet", min_value=100.0, max_value=1_000_000.0, value=500.0)
+    land_sqft = st.number_input("Land Square Feet", min_value=100.0, max_value=1_000_000.0, value=500.0, steps = 1.0, key = "land_sqft")
+    gross_default = min(1000.0, float(land_sqft))
+    gross_sqft = st.number_input("Gross Square Feet", min_value=100.0, max_value=float(land_sqft), value=gross_default, step = 1.0, keys="gross_default")
+    if gross_sqft > land_sqft:
+        gross_sqft = land_sqft
     year_built = st.number_input("Year Built", min_value=1800, max_value=2025, value=2000)
     sale_price = st.number_input("Sale Price ($)", min_value=10_000.0, max_value=1_000_000_000.0, value=1_000_000.0)
-    net_sqft = st.number_input("Net Square Feet", min_value=100.0, max_value=1_000_000.0, value=900.0)
+    st.number_input("Net Square Feet (auto = Land − Gross)",
+    value=float(net_sqft), step=1.0, disabled=True, key="net_sqft_readonly")
     #units_per_sqft_pct = st.slider("Units per Sqft (as %)", min_value=0.0, max_value=100.0, value=50.0)
     #floor_area_ratio = st.slider("Floor Area Ratio", min_value=0.0, max_value=12.0, value=2.5)
     UNITS_PER_SQFT_CONST = 59.62   
