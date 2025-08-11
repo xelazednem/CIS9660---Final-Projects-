@@ -610,6 +610,7 @@ elif section == "Regression - Total Units":
         year_built,
         sale_price,
         units_per_sqft_pct,
+        net_square_feet,
         borough_brooklyn,
         borough_manhattan,
         borough_queens,
