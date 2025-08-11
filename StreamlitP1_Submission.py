@@ -589,8 +589,6 @@ elif section == "Regression - Total Units":
     year_built = st.number_input("Year Built", min_value=1800, max_value=2025, value=2000)
     sale_price = st.number_input("Sale Price ($)", min_value=10_000.0, max_value=1_000_000_000.0, value=1_000_000.0)
     units_per_sqft_pct = st.slider("Units per Sqft (as %)", min_value=0.0, max_value=100.0, value=50.0)
-    net_sqft = st.number_input("Net Square Feet", min_value=100.0, max_value=1_000_000.0, value=900.0)
-    floor_area_ratio = st.slider("Floor Area Ratio", min_value=0.0, max_value=12.0, value=2.5)
 
     ### Codes the borough based on the user response. 1 if the borough is picked 0 otherwise.
     borough = st.selectbox("Select Borough", ["Brooklyn", "Manhattan", "Queens", "Staten Island", "The Bronx"])
