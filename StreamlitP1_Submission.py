@@ -932,30 +932,45 @@ elif section == "Model Results":
  ### Opens the AI Agent Section 
 
 def render_ai_agent():
-    # (Your Step 1 weather UI lives here)
-    st.subheader("Step 1: Check the weather for a neighborhood/City (Most locations can be used — Distances Measured from location center)")
-    neighborhood = st.text_input("Neighborhood / Area (e.g., 'SoHo, Manhattan, NY')")
+    # ----- STEP 1 -----
+    st.subheader("Step 1: Check the weather for a neighborhood/City ...")
+    neighborhood = st.text_input("Neighborhood / Area (e.g., 'SoHo, Manhattan, NY')",
+                                 value=st.session_state.get("neighborhood",""))
     st.session_state["neighborhood"] = neighborhood
 
-    if st.button("Get Weather"):
+    if st.button("Get Weather", key="get_weather_btn"):
         if not neighborhood.strip():
             st.warning("Please enter a neighborhood.")
         else:
-            try:
-                with st.spinner("Geocoding…"):
-                    lat, lon = geocode_place(neighborhood)
-                    st.session_state.latlon = (lat, lon)
-                with st.spinner("Fetching weather…"):
-                    wx = get_weather(lat, lon)
-                    st.session_state.wx = wx
+            with st.spinner("Geocoding…"):
+                lat, lon = geocode_place(neighborhood)
+                st.session_state.latlon = (lat, lon)
+            with st.spinner("Fetching weather…"):
+                st.session_state.wx = get_weather(lat, lon)
 
-                st.success(f"Weather for {neighborhood}")
-                st.write(f"**Conditions:** {wx['description']}")
-                st.write(f"**Temperature:** {wx['temp_f']} °F")
-                st.write(f"**Precipitation:** {wx['precip_in']} in")
-                st.write(f"**Wind:** {wx['wind_mph']} mph")
-            except Exception as e:
-                st.error(f"Sorry, something went wrong: {e}")
+    # ----- STEP 2 -----
+    st.subheader("Step 2: Weather-smart things to do")
+    neighborhood = st.session_state.get("neighborhood","")  # rehydrate each rerun
+
+    if st.button("Generate things to do", key="ideas_btn"):
+        if not neighborhood.strip():
+            st.warning("Please enter a neighborhood above first.")
+            st.stop()
+        if "wx" not in st.session_state:
+            st.warning("Please click Get Weather in Step 1 first.")
+            st.stop()
+        wx = st.session_state.wx
+        # ... AI call / fallback and render ...
+
+    # ----- STEP 3 -----
+    st.subheader("Step 3: Quick weather summary")
+    if st.button("Generate weather summary", key="wx_summary_btn"):
+        if "wx" not in st.session_state:
+            st.warning("Please click Get Weather in Step 1 first.")
+        else:
+            wx = st.session_state.wx
+            st.write(f"**Weather:** {wx['description']} · {wx['temp_f']}°F · "
+                     f"{wx['precip_in']} in · {wx['wind_mph']} mph")
 
 
 SYSTEM_PROMPT = """You are a local activity concierge. Suggest things to do
