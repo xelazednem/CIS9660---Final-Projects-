@@ -1055,6 +1055,7 @@ def rule_based_fallback(neighborhood: str, wx: dict, k: int = 8) -> dict:
     }
 
 st.subheader("Step 2: Weather-smart things to do")
+neighborhood = st.session_state.get("neighborhood", "")
 
 # make sure we have location + weather in session_state (from Step 1)
 if "wx" not in st.session_state and st.button("Fetch weather again"):
