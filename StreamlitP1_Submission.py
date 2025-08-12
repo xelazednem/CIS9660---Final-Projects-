@@ -18,16 +18,12 @@ import json
 from openai import OpenAI
 ###_________________________________________________________________________________
 os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
-def get_openai_client():
-    # read from Streamlit secrets OR environment each run
+def _get_openai_client():
     api_key = (st.secrets.get("OPENAI_API_KEY")
                if hasattr(st, "secrets") else None) or os.getenv("OPENAI_API_KEY")
     if not api_key:
-        return None, "OPENAI_API_KEY missing from secrets/environment."
-    try:
-        return OpenAI(api_key=api_key), None
-    except Exception as e:
-        return None, f"Failed to init OpenAI client: {e}"
+        raise RuntimeError("Missing OPENAI_API_KEY in secrets/environment.")
+    return OpenAI(api_key=api_key)
 CLIENT, CLIENT_ERR = get_openai_client()
 REPO_ID = "ZednemXela/df_2024"  
 FILENAME = "df_2024.csv"                       
