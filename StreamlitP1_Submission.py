@@ -932,37 +932,100 @@ elif section == "Model Results":
  ### Opens the AI Agent Section 
 
 def render_ai_agent():
-    # ----- STEP 1 -----
-    st.subheader("Step 1: Check the weather for a neighborhood/City ...")
-    neighborhood = st.text_input("Neighborhood / Area (e.g., 'SoHo, Manhattan, NY')",
-                                 value=st.session_state.get("neighborhood",""))
+    # ---------------- STEP 1 ----------------
+    st.subheader("Step 1: Check the weather for a neighborhood/City "
+                 "(Most locations can be used — Distances Measured from location center)")
+
+    neighborhood = st.text_input(
+        "Neighborhood / Area (e.g., 'SoHo, Manhattan, NY')",
+        value=st.session_state.get("neighborhood", "")
+    )
     st.session_state["neighborhood"] = neighborhood
 
     if st.button("Get Weather", key="get_weather_btn"):
         if not neighborhood.strip():
             st.warning("Please enter a neighborhood.")
         else:
+            try:
+                with st.spinner("Geocoding…"):
+                    lat, lon = geocode_place(neighborhood)
+                    st.session_state.latlon = (lat, lon)
+                with st.spinner("Fetching weather…"):
+                    st.session_state.wx = get_weather(lat, lon)
+
+                wx = st.session_state.wx
+                st.success(f"Weather for {neighborhood}")
+                st.write(f"**Conditions:** {wx['description']}")
+                st.write(f"**Temperature:** {wx['temp_f']} °F")
+                st.write(f"**Precipitation:** {wx['precip_in']} in")
+                st.write(f"**Wind:** {wx['wind_mph']} mph")
+            except Exception as e:
+                st.error(f"Sorry, something went wrong: {e}")
+
+    # quick status line so you know Step 1 ran
+    if "wx" in st.session_state:
+        wx = st.session_state.wx
+        st.caption(f"Weather: {wx['description']} · {wx['temp_f']}°F · "
+                   f"{wx['precip_in']} in · {wx['wind_mph']} mph")
+
+    # ---------------- STEP 2 ----------------
+    st.subheader("Step 2: Weather-smart things to do")
+
+    # rehydrate on every rerun
+    neighborhood = st.session_state.get("neighborhood", "")
+
+    if "wx" not in st.session_state and st.button("Fetch weather again", key="fetch_wx_again"):
+        if neighborhood.strip():
             with st.spinner("Geocoding…"):
                 lat, lon = geocode_place(neighborhood)
                 st.session_state.latlon = (lat, lon)
             with st.spinner("Fetching weather…"):
                 st.session_state.wx = get_weather(lat, lon)
 
-    # ----- STEP 2 -----
-    st.subheader("Step 2: Weather-smart things to do")
-    neighborhood = st.session_state.get("neighborhood","")  # rehydrate each rerun
-
     if st.button("Generate things to do", key="ideas_btn"):
         if not neighborhood.strip():
             st.warning("Please enter a neighborhood above first.")
-            st.stop()
-        if "wx" not in st.session_state:
+        elif "wx" not in st.session_state:
             st.warning("Please click Get Weather in Step 1 first.")
-            st.stop()
-        wx = st.session_state.wx
-        # ... AI call / fallback and render ...
+        else:
+            wx = st.session_state.wx
+            # === AI call or fallback (your existing code here) ===
+            try:
+                if CLIENT is None:
+                    st.warning("Using rule-based list.")
+                    st.caption(CLIENT_ERR)
+                    data = rule_based_fallback(neighborhood, wx, k=8)
+                else:
+                    with st.spinner("Asking the AI guide…"):
+                        user_prompt = build_user_prompt(neighborhood, wx, k=8)  # your helper
+                        resp = CLIENT.chat.completions.create(
+                            model="gpt-3.5-turbo",
+                            temperature=0.7,
+                            max_tokens=900,
+                            messages=[
+                                {"role": "system", "content": SYSTEM_PROMPT},
+                                {"role": "user", "content": user_prompt},
+                            ],
+                        )
+                        data = json.loads(resp.choices[0].message.content.strip())
+            except Exception as e:
+                st.warning("Using rule-based list.")
+                st.caption(f"AI call failed: {e}")
+                data = rule_based_fallback(neighborhood, wx, k=8)
 
-    # ----- STEP 3 -----
+            st.write(data.get("summary", "Ideas for today:"))
+            for i, idea in enumerate(data.get("ideas", []), 1):
+                with st.expander(f"{i}. {idea.get('title','Idea')}"):
+                    if idea.get("why"): st.write(idea["why"])
+                    meta = []
+                    if idea.get("indoor_outdoor"): meta.append(f"**Type:** {idea['indoor_outdoor']}")
+                    if idea.get("best_time"):      meta.append(f"**Best time:** {idea['best_time']}")
+                    if idea.get("est_budget"):     meta.append(f"**Budget:** {idea['est_budget']}")
+                    if meta: st.markdown(" • ".join(meta))
+                    spots = idea.get("example_spots") or []
+                    if spots: st.markdown("**Example spots:** " + ", ".join(spots))
+
+    # ---------------- STEP 3 ----------------
     st.subheader("Step 3: Quick weather summary")
     if st.button("Generate weather summary", key="wx_summary_btn"):
         if "wx" not in st.session_state:
@@ -970,7 +1033,7 @@ def render_ai_agent():
         else:
             wx = st.session_state.wx
             st.write(f"**Weather:** {wx['description']} · {wx['temp_f']}°F · "
-                     f"{wx['precip_in']} in · {wx['wind_mph']} mph")
+                     f"{wx['precip_in']} in precip · {wx['wind_mph']} mph")
 
 
 SYSTEM_PROMPT = """You are a local activity concierge. Suggest things to do
