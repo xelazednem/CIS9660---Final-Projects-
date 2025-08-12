@@ -920,9 +920,9 @@ elif section == "Model Results":
  ### Opens the AI Agent Section 
 
 elif section == "AI Agent":
-  st.subheader("Step 1: Check the weather for a neighborhood/City (Most locations can be used -- Distances Measured from location center)")
+    st.subheader("Step 1: Check the weather for a neighborhood/City (Most locations can be used — Distances Measured from location center)")
     neighborhood = st.text_input("Neighborhood / Area (e.g., 'SoHo, Manhattan, NY')")
-    st.session_state["neighborhood"] = neighborhood 
+    st.session_state["neighborhood"] = neighborhood
   ### Initiates when the weather button is pressed. 
   if st.button("Get Weather"):
       if not neighborhood.strip():
