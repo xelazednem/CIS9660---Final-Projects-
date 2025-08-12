@@ -17,7 +17,6 @@ from huggingface_hub import hf_hub_download
 import json
 from openai import OpenAI
 ###_________________________________________________________________________________
-os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 def _get_openai_client():
     api_key = (st.secrets.get("OPENAI_API_KEY")
                if hasattr(st, "secrets") else None) or os.getenv("OPENAI_API_KEY")
@@ -55,7 +54,11 @@ def _openai_client():
     return OpenAI(api_key=key)
 
 def ai_summary_with_openai(neighborhood, wx, picks, shortlist, model="gpt-3.5-turbo"):
-    client = _openai_client()
+    client = _get_openai_client()
+    resp = client.chat.completions.create(
+    model="gpt-3.5-turbo",
+    messages=[...],
+    )
     system = (
         "You are a concise food guide. Use the weather and the shortlist of nearby restaurants "
         "to make 2–4 specific cuisine suggestions and a friendly rationale. "
