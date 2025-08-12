@@ -18,15 +18,17 @@ import json
 from openai import OpenAI
 ###_________________________________________________________________________________
 os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
-API_KEY = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
 def get_openai_client():
-    if not _API_KEY:
-        return None
+    # read from Streamlit secrets OR environment each run
+    api_key = (st.secrets.get("OPENAI_API_KEY")
+               if hasattr(st, "secrets") else None) or os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        return None, "OPENAI_API_KEY missing from secrets/environment."
     try:
-        return OpenAI(api_key=_API_KEY)
-    except Exception:
-        return None
-CLIENT = get_openai_client()
+        return OpenAI(api_key=api_key), None
+    except Exception as e:
+        return None, f"Failed to init OpenAI client: {e}"
+CLIENT, CLIENT_ERR = get_openai_client()
 REPO_ID = "ZednemXela/df_2024"  
 FILENAME = "df_2024.csv"                       
 REPO_TYPE = "dataset"
@@ -1089,26 +1091,34 @@ if st.button("Generate things to do"):
 
         wx = st.session_state.wx
         try:
+               if CLIENT is None:
+        st.warning("Using rule-based list.")
+        st.caption(CLIENT_ERR)
+        data = rule_based_fallback(neighborhood, wx, k=8)
+    else:
+        try:
             if CLIENT is None:
-                raise RuntimeError("Missing OPENAI_API_KEY (secrets/environment) or failed client init.")
-            with st.spinner("Asking the AI guide…"):
-                data = llm_things_to_do(neighborhood, wx, k=8)  # your function that uses CLIENT
-        except Exception as e:
-            st.warning("Using a quick rule-based list instead.")
-            st.caption(f"AI call failed: {e}")
-            data = rule_based_fallback(neighborhood, wx, k=8)
-    
-        st.write(data.get("summary", "Ideas for today:"))
-        for i, idea in enumerate(data.get("ideas", []), 1):
-            with st.expander(f"{i}. {idea.get('title','Idea')}"):
-                if idea.get("why"): st.write(idea["why"])
-                meta = []
-                if idea.get("indoor_outdoor"): meta.append(f"**Type:** {idea['indoor_outdoor']}")
-                if idea.get("best_time"):      meta.append(f"**Best time:** {idea['best_time']}")
-                if idea.get("est_budget"):     meta.append(f"**Budget:** {idea['est_budget']}")
-                if meta: st.markdown(" • ".join(meta))
-                spots = idea.get("example_spots") or []
-                if spots: st.markdown("**Example spots:** " + ", ".join(spots))
+                st.warning("Using rule-based list.")
+                st.caption(CLIENT_ERR)
+                data = rule_based_fallback(neighborhood, wx, k=8)
+            else:
+                try:
+                    with st.spinner("Asking the AI guide…"):
+                        resp = CLIENT.chat.completions.create(
+                            model="gpt-3.5-turbo",  # use this first; switch later if you have 4o access
+                            temperature=0.7,
+                            max_tokens=900,
+                            messages=[
+                                {"role": "system", "content": SYSTEM_PROMPT},
+                                {"role": "user", "content": user_prompt},
+                            ],
+                        )
+                        data = json.loads(resp.choices[0].message.content.strip())
+                except Exception as e:
+                    st.warning("Using rule-based list.")
+                    st.caption(f"AI call failed: {e}")
+                    data = rule_based_fallback(neighborhood, wx, k=8)
+  
 
 # =========================
 # (Optional) Step 3: Brief weather summary
