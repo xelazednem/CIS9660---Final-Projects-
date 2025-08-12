@@ -905,7 +905,7 @@ elif section == "Model Results":
       """
       <div style='text-align: center;'>
         <p style='font-size:16px;'>
-        It can be seen that out of the 6 different supervised models the Random Forrest model is the winning supervised model with the highest accurary of 50.11%. 
+        It can be seen that out of the 6 different supervised models the Random Forrest model is the winning supervised model with the highest accurary of 65.5%%. 
         <br>
         <br> 
         In regards to the unsupervised K - Means test, it can be noted that the model did not return any real useful information. <br> 
