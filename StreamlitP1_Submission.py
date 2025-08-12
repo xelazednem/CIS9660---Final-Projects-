@@ -1090,35 +1090,45 @@ if st.button("Generate things to do"):
                 st.session_state.wx = get_weather(lat, lon)
 
         wx = st.session_state.wx
-        try:
-               if CLIENT is None:
-        st.warning("Using rule-based list.")
-        st.caption(CLIENT_ERR)
-        data = rule_based_fallback(neighborhood, wx, k=8)
-    else:
+
+        # --- AI or fallback ---
         try:
             if CLIENT is None:
                 st.warning("Using rule-based list.")
                 st.caption(CLIENT_ERR)
                 data = rule_based_fallback(neighborhood, wx, k=8)
             else:
-                try:
-                    with st.spinner("Asking the AI guide…"):
-                        resp = CLIENT.chat.completions.create(
-                            model="gpt-3.5-turbo",  # use this first; switch later if you have 4o access
-                            temperature=0.7,
-                            max_tokens=900,
-                            messages=[
-                                {"role": "system", "content": SYSTEM_PROMPT},
-                                {"role": "user", "content": user_prompt},
-                            ],
-                        )
-                        data = json.loads(resp.choices[0].message.content.strip())
-                except Exception as e:
-                    st.warning("Using rule-based list.")
-                    st.caption(f"AI call failed: {e}")
-                    data = rule_based_fallback(neighborhood, wx, k=8)
-  
+                with st.spinner("Asking the AI guide…"):
+                    resp = CLIENT.chat.completions.create(
+                        model="gpt-3.5-turbo",  # safe starting model
+                        temperature=0.7,
+                        max_tokens=900,
+                        messages=[
+                            {"role": "system", "content": SYSTEM_PROMPT},
+                            {"role": "user", "content": user_prompt},
+                        ],
+                    )
+                    data = json.loads(resp.choices[0].message.content.strip())
+        except Exception as e:
+            st.warning("Using rule-based list.")
+            st.caption(f"AI call failed: {e}")
+            data = rule_based_fallback(neighborhood, wx, k=8)
+
+        # --- Display results ---
+        st.write(data.get("summary", "Ideas for today:"))
+        for i, idea in enumerate(data.get("ideas", []), 1):
+            with st.expander(f"{i}. {idea.get('title','Idea')}"):
+                if idea.get("why"): 
+                    st.write(idea["why"])
+                meta = []
+                if idea.get("indoor_outdoor"): meta.append(f"**Type:** {idea['indoor_outdoor']}")
+                if idea.get("best_time"):      meta.append(f"**Best time:** {idea['best_time']}")
+                if idea.get("est_budget"):     meta.append(f"**Budget:** {idea['est_budget']}")
+                if meta: 
+                    st.markdown(" • ".join(meta))
+                spots = idea.get("example_spots") or []
+                if spots: 
+                    st.markdown("**Example spots:** " + ", ".join(spots))
 
 # =========================
 # (Optional) Step 3: Brief weather summary
