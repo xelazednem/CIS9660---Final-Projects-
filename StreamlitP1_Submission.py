@@ -18,7 +18,7 @@ import json
 from openai import OpenAI
 ###_________________________________________________________________________________
 os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
-client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+API_KEY = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
 def get_openai_client():
     if not _API_KEY:
         return None
@@ -26,7 +26,6 @@ def get_openai_client():
         return OpenAI(api_key=_API_KEY)
     except Exception:
         return None
-
 CLIENT = get_openai_client()
 REPO_ID = "ZednemXela/df_2024"  
 FILENAME = "df_2024.csv"                       
