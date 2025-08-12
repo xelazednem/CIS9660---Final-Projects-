@@ -919,11 +919,12 @@ elif section == "Model Results":
  ###____________________________________________________________________________
  ### Opens the AI Agent Section 
 
-elif section == "AI Agent":
+def render_ai_agent():
+    # (Your Step 1 weather UI lives here)
     st.subheader("Step 1: Check the weather for a neighborhood/City (Most locations can be used — Distances Measured from location center)")
     neighborhood = st.text_input("Neighborhood / Area (e.g., 'SoHo, Manhattan, NY')")
     st.session_state["neighborhood"] = neighborhood
-  ### Initiates when the weather button is pressed. 
+
     if st.button("Get Weather"):
         if not neighborhood.strip():
             st.warning("Please enter a neighborhood.")
@@ -943,6 +944,7 @@ elif section == "AI Agent":
                 st.write(f"**Wind:** {wx['wind_mph']} mph")
             except Exception as e:
                 st.error(f"Sorry, something went wrong: {e}")
+
 
   ### Creates rules for recommendations based on the weather. Returns a list of foods that fit the weather and a rationale of why they fit. 
   ### This function is inplace incase the AI does not work. 
