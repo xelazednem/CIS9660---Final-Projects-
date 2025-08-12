@@ -53,10 +53,6 @@ def _openai_client():
     return OpenAI(api_key=key)
 
 def ai_summary_with_openai(neighborhood, wx, picks, shortlist, model="gpt-3.5-turbo"):
-    client = _get_openai_client()
-    resp = client.chat.completions.create(
-    model="gpt-3.5-turbo",
-    )
     system = (
         "You are a concise food guide. Use the weather and the shortlist of nearby restaurants "
         "to make 2–4 specific cuisine suggestions and a friendly rationale. "
