@@ -17,6 +17,17 @@ from huggingface_hub import hf_hub_download
 import json
 from openai import OpenAI
 ###_________________________________________________________________________________
+os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
+client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+def get_openai_client():
+    if not _API_KEY:
+        return None
+    try:
+        return OpenAI(api_key=_API_KEY)
+    except Exception:
+        return None
+
+CLIENT = get_openai_client()
 REPO_ID = "ZednemXela/df_2024"  
 FILENAME = "df_2024.csv"                       
 REPO_TYPE = "dataset"
@@ -946,11 +957,6 @@ def render_ai_agent():
                 st.error(f"Sorry, something went wrong: {e}")
 
 
-  ### Creates rules for recommendations based on the weather. Returns a list of foods that fit the weather and a rationale of why they fit. 
-  ### This function is inplace incase the AI does not work. 
-os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
-client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])  # make sure OPENAI_API_KEY is set in your env / secrets
-
 SYSTEM_PROMPT = """You are a local activity concierge. Suggest things to do
 tailored to the location and current weather. Do NOT recommend restaurants or bars.
 Prefer free/low-cost, public and cultural options: parks, walks, waterfronts,
@@ -994,7 +1000,7 @@ def llm_things_to_do(neighborhood: str, wx: dict, k: int = 8) -> dict:
     )
 
     resp = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="gpt-3.5-turbo",
         temperature=0.7,
         max_tokens=900,
         messages=[
@@ -1084,12 +1090,15 @@ if st.button("Generate things to do"):
 
         wx = st.session_state.wx
         try:
+            if CLIENT is None:
+                raise RuntimeError("Missing OPENAI_API_KEY (secrets/environment) or failed client init.")
             with st.spinner("Asking the AI guide…"):
-                data = llm_things_to_do(neighborhood, wx, k=8)
-        except Exception:
-            st.warning("AI service unavailable — showing a quick rule-based list instead.")
+                data = llm_things_to_do(neighborhood, wx, k=8)  # your function that uses CLIENT
+        except Exception as e:
+            st.warning("Using a quick rule-based list instead.")
+            st.caption(f"AI call failed: {e}")
             data = rule_based_fallback(neighborhood, wx, k=8)
-
+    
         st.write(data.get("summary", "Ideas for today:"))
         for i, idea in enumerate(data.get("ideas", []), 1):
             with st.expander(f"{i}. {idea.get('title','Idea')}"):
