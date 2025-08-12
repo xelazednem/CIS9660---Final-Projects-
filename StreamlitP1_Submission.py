@@ -921,6 +921,27 @@ elif section == "Model Results":
 
 elif section == "AI Agent":
   st.subheader("Step 1: Check the weather for a neighborhood/City (Most locations can be used -- Distances Measured from location center)")
+    neighborhood = st.text_input("Neighborhood / Area (e.g., 'SoHo, Manhattan, NY')")
+  ### Initiates when the weather button is pressed. 
+  if st.button("Get Weather"):
+      if not neighborhood.strip():
+          st.warning("Please enter a neighborhood.")
+      else:
+          try:
+              with st.spinner("Geocoding…"):
+                  lat, lon = geocode_place(neighborhood)
+                  st.session_state.latlon = (lat, lon)  ### cache for later steps
+              with st.spinner("Fetching weather…"):
+                  wx = get_weather(lat, lon)
+                  st.session_state.wx = wx           ### cache for later steps
+
+              st.success(f"Weather for {neighborhood}")
+              st.write(f"**Conditions:** {wx['description']}")
+              st.write(f"**Temperature:** {wx['temp_f']} °F")
+              st.write(f"**Precipitation:** {wx['precip_in']} in")
+              st.write(f"**Wind:** {wx['wind_mph']} mph")
+          except Exception as e:
+              st.error(f"Sorry, something went wrong: {e}")
 
   ### Creates rules for recommendations based on the weather. Returns a list of foods that fit the weather and a rationale of why they fit. 
   ### This function is inplace incase the AI does not work. 
