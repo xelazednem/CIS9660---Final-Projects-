@@ -946,7 +946,7 @@ elif section == "AI Agent":
 
   ### Creates rules for recommendations based on the weather. Returns a list of foods that fit the weather and a rationale of why they fit. 
   ### This function is inplace incase the AI does not work. 
-  client = OpenAI()  # make sure OPENAI_API_KEY is set in your env / secrets
+client = OpenAI()  # make sure OPENAI_API_KEY is set in your env / secrets
 
 SYSTEM_PROMPT = """You are a local activity concierge. Suggest things to do
 tailored to the location and current weather. Do NOT recommend restaurants or bars.
