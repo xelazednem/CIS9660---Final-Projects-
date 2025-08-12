@@ -18,10 +18,9 @@ import json
 from openai import OpenAI
 ###_________________________________________________________________________________
 def _get_openai_client():
-    api_key = (st.secrets.get("OPENAI_API_KEY")
-               if hasattr(st, "secrets") else None) or os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise RuntimeError("Missing OPENAI_API_KEY in secrets/environment.")
+    api_key = (st.secrets.get("OPENAI_API_KEY") if hasattr(st, "secrets") else None) or os.getenv("OPENAI_API_KEY")
+    if not api_key or not isinstance(api_key, str) or not api_key.startswith("sk-"):
+        raise RuntimeError("OPENAI_API_KEY missing or invalid in secrets/environment.")
     return OpenAI(api_key=api_key)
 REPO_ID = "ZednemXela/df_2024"  
 FILENAME = "df_2024.csv"                       
@@ -57,7 +56,6 @@ def ai_summary_with_openai(neighborhood, wx, picks, shortlist, model="gpt-3.5-tu
     client = _get_openai_client()
     resp = client.chat.completions.create(
     model="gpt-3.5-turbo",
-    messages=[...],
     )
     system = (
         "You are a concise food guide. Use the weather and the shortlist of nearby restaurants "
