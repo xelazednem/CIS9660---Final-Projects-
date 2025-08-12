@@ -930,295 +930,168 @@ elif section == "Model Results":
     )
  ###____________________________________________________________________________
  ### Opens the AI Agent Section 
+elif section == "AI Agent":
+  st.subheader("Step 1: Check the weather for a neighborhood/City (Most locations can be used -- Distances Measured from location center)")
 
-def render_ai_agent():
-    # ---------------- STEP 1 ----------------
-    st.subheader("Step 1: Check the weather for a neighborhood/City "
-                 "(Most locations can be used — Distances Measured from location center)")
+  ### Creates rules for recommendations based on the weather. Returns a list of foods that fit the weather and a rationale of why they fit. 
+  ### This function is inplace incase the AI does not work. 
+  def cuisine_recs(weather: dict):
+      """
+      Return (picks, rationale) based on weather dict with keys:
+      temp_f, precip_in, wind_mph, description
+      """
+      desc = (weather.get("description") or "").lower()
+      temp = float(weather.get("temp_f") or 70)
+      precip = float(weather.get("precip_in") or 0)
 
-    neighborhood = st.text_input(
-        "Neighborhood / Area (e.g., 'SoHo, Manhattan, NY')",
-        value=st.session_state.get("neighborhood", "")
-    )
-    st.session_state["neighborhood"] = neighborhood
+      ### Defines the rules using controls. 
+      if "rain" in desc or "shower" in desc or precip > 0.05:
+          return (
+              ["Soup", "Ramen", "Pho", "Indian"],
+              "Rainy weather—cozy soups and warm, comforting dishes hit the spot."
+          )
+      elif temp >= 85:
+          return (
+              ["Salad", "Sushi", "Mediterranean", "Smoothies", "Ice Cream"],
+              "Hot day—light and refreshing options are best."
+          )
+      elif temp <= 50:
+          return (
+              ["Ramen", "Hotpot", "Curry", "BBQ", "Italian"],
+              "Chilly weather—warming broths and hearty comfort food are ideal."
+          )
+      else:
+          return (
+              ["Pizza", "Tacos", "Burgers", "Brunch", "Mediterranean"],
+              "Mild day—plenty of patio-friendly crowd-pleasers to choose from."
+          )
+  ### this takes the totoal dataframe and creates a short list from it. 
+  def shortlist_for_ai(df, top_n: int = 6) -> str:
+      """Compact bullet list for the AI prompt: 'Name — cuisine (0.4 mi)'."""
+      import pandas as pd
+      if df is None or (isinstance(df, pd.DataFrame) and df.empty):
+          return "No restaurants found."
+      rows = []
+      for _, r in df.head(top_n).iterrows():
+          name = r.get("name", "Unknown")
+          cuisine = r.get("cuisine", "") or ""
+          dist = r.get("distance_miles", "")
+          rows.append(f"- {name} — {cuisine} ({dist} mi)")
+      return "\n".join(rows)
+    
 
-    if st.button("Get Weather", key="get_weather_btn"):
-        if not neighborhood.strip():
-            st.warning("Please enter a neighborhood.")
-        else:
-            try:
-                with st.spinner("Geocoding…"):
-                    lat, lon = geocode_place(neighborhood)
-                    st.session_state.latlon = (lat, lon)
-                with st.spinner("Fetching weather…"):
-                    st.session_state.wx = get_weather(lat, lon)
+  neighborhood = st.text_input("Neighborhood / Area (e.g., 'SoHo, Manhattan, NY')")
+  ### Initiates when the weather button is pressed. 
+  if st.button("Get Weather"):
+      if not neighborhood.strip():
+          st.warning("Please enter a neighborhood.")
+      else:
+          try:
+              with st.spinner("Geocoding…"):
+                  lat, lon = geocode_place(neighborhood)
+                  st.session_state.latlon = (lat, lon)  ### cache for later steps
+              with st.spinner("Fetching weather…"):
+                  wx = get_weather(lat, lon)
+                  st.session_state.wx = wx           ### cache for later steps
 
-                wx = st.session_state.wx
-                st.success(f"Weather for {neighborhood}")
-                st.write(f"**Conditions:** {wx['description']}")
-                st.write(f"**Temperature:** {wx['temp_f']} °F")
-                st.write(f"**Precipitation:** {wx['precip_in']} in")
-                st.write(f"**Wind:** {wx['wind_mph']} mph")
-            except Exception as e:
-                st.error(f"Sorry, something went wrong: {e}")
+              st.success(f"Weather for {neighborhood}")
+              st.write(f"**Conditions:** {wx['description']}")
+              st.write(f"**Temperature:** {wx['temp_f']} °F")
+              st.write(f"**Precipitation:** {wx['precip_in']} in")
+              st.write(f"**Wind:** {wx['wind_mph']} mph")
+          except Exception as e:
+              st.error(f"Sorry, something went wrong: {e}")
 
-    # quick status line so you know Step 1 ran
-    if "wx" in st.session_state:
-        wx = st.session_state.wx
-        st.caption(f"Weather: {wx['description']} · {wx['temp_f']}°F · "
-                   f"{wx['precip_in']} in · {wx['wind_mph']} mph")
+  st.subheader("Step 2: Find nearby restaurants")
+  ### Adds a slider that lets the user pick distances. 
+  radius_miles = st.slider("Search radius (miles)", 0.10, 1.00, 0.75, 0.05)
+  ### Initates whent he restuarant button is pressed. 
+  if st.button("Find Restaurants"):
+      if not neighborhood.strip():
+        ### Controls in place so that the previous two buttons have to be presseed before this one. 
+          st.warning("Please enter a neighborhood above first.")
+      else:
+          try:
+              ### reuse cached geocode if available
+              if "latlon" in st.session_state:
+                  lat, lon = st.session_state.latlon
+              else:
+                  with st.spinner("Geocoding…"):
+                      lat, lon = geocode_place(neighborhood)
+                      st.session_state.latlon = (lat, lon)
 
-    # ---------------- STEP 2 ----------------
-    st.subheader("Step 2: Weather-smart things to do")
+              with st.spinner("Searching restaurants…"):
+                  df_rest = overpass_restaurants(lat, lon, radius_miles=radius_miles)
+                  st.session_state.df_rest = df_rest  ### keep for Step 3
 
-    # rehydrate on every rerun
-    neighborhood = st.session_state.get("neighborhood", "")
+              if df_rest.empty:
+                  st.info("No restaurants found in this radius. Try a larger radius (up to 1 mile).")
+              else:
+                  st.success(f"Found {len(df_rest)} restaurants within {radius_miles:.2f} miles")
+                  st.dataframe(df_rest[["name", "cuisine", "distance_miles", "osm_url"]])
 
-    if "wx" not in st.session_state and st.button("Fetch weather again", key="fetch_wx_again"):
-        if neighborhood.strip():
-            with st.spinner("Geocoding…"):
-                lat, lon = geocode_place(neighborhood)
-                st.session_state.latlon = (lat, lon)
-            with st.spinner("Fetching weather…"):
-                st.session_state.wx = get_weather(lat, lon)
+                  ### quick map (if lat/lon columns exist)
+                  try:
+                      st.map(df_rest.rename(columns={"lat": "latitude", "lon": "longitude"})[["latitude", "longitude"]])
+                  except Exception:
+                      pass
 
-    if st.button("Generate things to do", key="ideas_btn"):
-        if not neighborhood.strip():
-            st.warning("Please enter a neighborhood above first.")
-        elif "wx" not in st.session_state:
-            st.warning("Please click Get Weather in Step 1 first.")
-        else:
-            wx = st.session_state.wx
-            # === AI call or fallback (your existing code here) ===
-            try:
-                if CLIENT is None:
-                    st.warning("Using rule-based list.")
-                    st.caption(CLIENT_ERR)
-                    data = rule_based_fallback(neighborhood, wx, k=8)
-                else:
-                    with st.spinner("Asking the AI guide…"):
-                        user_prompt = build_user_prompt(neighborhood, wx, k=8)  # your helper
-                        resp = CLIENT.chat.completions.create(
-                            model="gpt-3.5-turbo",
-                            temperature=0.7,
-                            max_tokens=900,
-                            messages=[
-                                {"role": "system", "content": SYSTEM_PROMPT},
-                                {"role": "user", "content": user_prompt},
-                            ],
-                        )
-                        data = json.loads(resp.choices[0].message.content.strip())
-            except Exception as e:
-                st.warning("Using rule-based list.")
-                st.caption(f"AI call failed: {e}")
-                data = rule_based_fallback(neighborhood, wx, k=8)
+          except Exception as e:
+              st.error(f"Sorry, something went wrong: {e}")
 
-            st.write(data.get("summary", "Ideas for today:"))
-            for i, idea in enumerate(data.get("ideas", []), 1):
-                with st.expander(f"{i}. {idea.get('title','Idea')}"):
-                    if idea.get("why"): st.write(idea["why"])
-                    meta = []
-                    if idea.get("indoor_outdoor"): meta.append(f"**Type:** {idea['indoor_outdoor']}")
-                    if idea.get("best_time"):      meta.append(f"**Best time:** {idea['best_time']}")
-                    if idea.get("est_budget"):     meta.append(f"**Budget:** {idea['est_budget']}")
-                    if meta: st.markdown(" • ".join(meta))
-                    spots = idea.get("example_spots") or []
-                    if spots: st.markdown("**Example spots:** " + ", ".join(spots))
+  st.subheader("Step 3: Weather-smart AI summary")
 
-    # ---------------- STEP 3 ----------------
-    st.subheader("Step 3: Quick weather summary")
-    if st.button("Generate weather summary", key="wx_summary_btn"):
-        if "wx" not in st.session_state:
-            st.warning("Please click Get Weather in Step 1 first.")
-        else:
-            wx = st.session_state.wx
-            st.write(f"**Weather:** {wx['description']} · {wx['temp_f']}°F · "
-                     f"{wx['precip_in']} in precip · {wx['wind_mph']} mph")
+  if st.button("Generate AI Summary"):
+      if not neighborhood.strip():
+          st.warning("Please enter a neighborhood above first.")
+          st.stop()
 
+      ### Make sure we have restaurants from Step 2
+      if "df_rest" not in st.session_state or st.session_state.df_rest is None or st.session_state.df_rest.empty:
+          st.error("Please run Step 2 (Find Restaurants) first.")
+          st.stop()
 
-SYSTEM_PROMPT = """You are a local activity concierge. Suggest things to do
-tailored to the location and current weather. Do NOT recommend restaurants or bars.
-Prefer free/low-cost, public and cultural options: parks, walks, waterfronts,
-museums, libraries, markets, landmarks, viewpoints, self-guided tours, indoor
-options for rain/cold, outdoor for clear/mild. Keep it safe, legal, and practical.
-Return STRICT JSON only, using this schema:
+      df_rest = st.session_state.df_rest
 
-{
-  "summary": "1 sentence overview",
-  "ideas": [
-    {
-      "title": "short name",
-      "why": "1-2 sentences on why it's a good fit for the weather",
-      "indoor_outdoor": "indoor|outdoor|mixed",
-      "best_time": "morning|afternoon|evening",
-      "est_budget": "free|$|$$",
-      "example_spots": ["optional, a few specific places or areas (non-food)"]
-    }
-  ]
-}
-"""
+      ### Ensure weather is in place (reuse if saved; otherwise fetch)
+      if "wx" in st.session_state:
+          wx = st.session_state.wx
+      else:
+          ### reuse cached geocode if available
+          if "latlon" in st.session_state:
+              lat, lon = st.session_state.latlon
+          else:
+              with st.spinner("Looking up weather…"):
+                  lat, lon = geocode_place(neighborhood)
+                  st.session_state.latlon = (lat, lon)
+          with st.spinner("Fetching weather…"):
+              wx = get_weather(lat, lon)
+              st.session_state.wx = wx
 
-def llm_things_to_do(neighborhood: str, wx: dict, k: int = 8) -> dict:
-    """Ask the LLM for JSON suggestions; returns a Python dict."""
-    snapshot = {
-        "location": neighborhood,
-        "date": datetime.now().strftime("%Y-%m-%d"),
-        # keys aligned to your weather payload
-        "temp_f": wx.get("temp_f"),
-        "precip_in": wx.get("precip_in"),
-        "wind_mph": wx.get("wind_mph"),
-        "condition": wx.get("description"),
-        "notes": "No food/drink venues. Focus on activities and public places."
-    }
+      ### Weather-aware cuisine picks
+      picks, rationale = cuisine_recs(wx)
 
-    user_prompt = (
-        f"LOCATION: {neighborhood}\n"
-        f"WEATHER_SNAPSHOT: {json.dumps(snapshot)}\n"
-        f"NUM_IDEAS: {k}\n"
-        "Follow the schema exactly. Do not include any text outside the JSON."
-    )
+      ###Build shortlist text for the AI prompt
+      shortlist = shortlist_for_ai(df_rest, top_n=6)
 
-    resp = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        temperature=0.7,
-        max_tokens=900,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_prompt},
-        ],
-    )
-    content = resp.choices[0].message.content.strip()
-    return json.loads(content)
+      st.write(f"**Weather:** {wx['description']} · {wx['temp_f']}°F · {wx['precip_in']} in · {wx['wind_mph']} mph")
+      st.write(f"**Weather-aware cuisine picks:** {', '.join(picks) if picks else 'Any'}")
+      st.caption(rationale)
 
-# simple fallback if the AI call fails (no restaurants here either)
-def rule_based_fallback(neighborhood: str, wx: dict, k: int = 8) -> dict:
-    desc = (wx.get("description") or "").lower()
-    t = float(wx.get("temp_f") or 70)
-    precip = float(wx.get("precip_in") or 0)
-    windy = float(wx.get("wind_mph") or 0) >= 20
+      ### Ask the hosted model (OpenRouter); fallback if key missing/unavailable
+      try:
+          with st.spinner("Asking the AI guide…"):
+            summary = ai_summary_with_openai(neighborhood, wx, picks, shortlist)
+            st.success("AI Summary")
+            st.write(summary)
+      except Exception:
+          st.warning("AI service unavailable or no API key — showing a quick summary instead.")
+          st.write(
+              f"It’s {wx['description'].lower()} and {wx['temp_f']}°F in {neighborhood}. "
+              f"{rationale} Nearby you’ll find:\n\n{shortlist}\n\n"
+              f"Pick a spot that matches your mood and the weather—enjoy!"
+          )
 
-    ideas = []
-    rainy = ("rain" in desc or "shower" in desc or precip > 0.05)
-    if rainy:
-        ideas += ["Art museum crawl", "Public library reading hour", "Indoor climbing gym",
-                  "Bookstore + self-guided architecture walk (covered arcades)",
-                  "Science center or aquarium"]
-    if t < 50:
-        ideas += ["Historic house museum", "Gallery row stroll", "Matinee movie",
-                  "Indoor botanical conservatory"]
-    if 55 <= t <= 80 and not rainy:
-        ideas += ["Waterfront/park walk", "Sculpture trail or public art hunt",
-                  "Botanical garden", "Bike the greenway", "Ferry ride/lookout points"]
-    if t > 85 and not rainy:
-        ideas += ["Shaded park walk + fountains", "Free outdoor pool or beach",
-                  "Museum (A/C) midday; sunset skyline walk"]
-    if windy and not rainy:
-        ideas += ["Neighborhood architecture loop with sheltered stops",
-                  "Photography under bridges/covered promenades"]
-
-    # dedupe & trim
-    seen, cleaned = set(), []
-    for x in ideas:
-        if x not in seen:
-            seen.add(x)
-            cleaned.append(x)
-    cleaned = cleaned[:k]
-
-    return {
-        "summary": f"Weather-smart ideas for {neighborhood}.",
-        "ideas": [
-            {
-                "title": title,
-                "why": "Good match for today’s conditions.",
-                "indoor_outdoor": "indoor" if ("museum" in title.lower() or "library" in title.lower() or "indoor" in title.lower()) else "outdoor",
-                "best_time": "afternoon",
-                "est_budget": "free",
-                "example_spots": []
-            }
-            for title in cleaned
-        ]
-    }
-
-st.subheader("Step 2: Weather-smart things to do")
-neighborhood = st.session_state.get("neighborhood", "")
-
-# make sure we have location + weather in session_state (from Step 1)
-if "wx" not in st.session_state and st.button("Fetch weather again"):
-    if "latlon" not in st.session_state:
-        neighborhood = st.session_state.get("neighborhood", "")
-        if neighborhood.strip():
-            lat, lon = geocode_place(neighborhood)
-            st.session_state.latlon = (lat, lon)
-    if "latlon" in st.session_state:
-        lat, lon = st.session_state.latlon
-        st.session_state.wx = get_weather(lat, lon)
-
-if st.button("Generate things to do"):
-    if not neighborhood.strip():
-        st.warning("Please enter a neighborhood above first.")
-    else:
-        # ensure weather is available
-        if "wx" not in st.session_state:
-            if "latlon" not in st.session_state:
-                with st.spinner("Geocoding…"):
-                    lat, lon = geocode_place(neighborhood)
-                    st.session_state.latlon = (lat, lon)
-            with st.spinner("Fetching weather…"):
-                lat, lon = st.session_state.latlon
-                st.session_state.wx = get_weather(lat, lon)
-
-        wx = st.session_state.wx
-
-        # --- AI or fallback ---
-        try:
-            if CLIENT is None:
-                st.warning("Using rule-based list.")
-                st.caption(CLIENT_ERR)
-                data = rule_based_fallback(neighborhood, wx, k=8)
-            else:
-                with st.spinner("Asking the AI guide…"):
-                    resp = CLIENT.chat.completions.create(
-                        model="gpt-3.5-turbo",  # safe starting model
-                        temperature=0.7,
-                        max_tokens=900,
-                        messages=[
-                            {"role": "system", "content": SYSTEM_PROMPT},
-                            {"role": "user", "content": user_prompt},
-                        ],
-                    )
-                    data = json.loads(resp.choices[0].message.content.strip())
-        except Exception as e:
-            st.warning("Using rule-based list.")
-            st.caption(f"AI call failed: {e}")
-            data = rule_based_fallback(neighborhood, wx, k=8)
-
-        # --- Display results ---
-        st.write(data.get("summary", "Ideas for today:"))
-        for i, idea in enumerate(data.get("ideas", []), 1):
-            with st.expander(f"{i}. {idea.get('title','Idea')}"):
-                if idea.get("why"): 
-                    st.write(idea["why"])
-                meta = []
-                if idea.get("indoor_outdoor"): meta.append(f"**Type:** {idea['indoor_outdoor']}")
-                if idea.get("best_time"):      meta.append(f"**Best time:** {idea['best_time']}")
-                if idea.get("est_budget"):     meta.append(f"**Budget:** {idea['est_budget']}")
-                if meta: 
-                    st.markdown(" • ".join(meta))
-                spots = idea.get("example_spots") or []
-                if spots: 
-                    st.markdown("**Example spots:** " + ", ".join(spots))
-
-# =========================
-# (Optional) Step 3: Brief weather summary
-# =========================
-st.subheader("Step 3: Quick weather summary")
-if st.button("Generate weather summary"):
-    if "wx" not in st.session_state:
-        st.warning("Get weather in Step 1 first.")
-    else:
-        wx = st.session_state.wx
-        st.write(f"**Weather:** {wx['description']} · {wx['temp_f']}°F · "
-                 f"{wx['precip_in']} in precip · {wx['wind_mph']} mph wind")
 
 
 
