@@ -922,6 +922,7 @@ elif section == "Model Results":
 elif section == "AI Agent":
   st.subheader("Step 1: Check the weather for a neighborhood/City (Most locations can be used -- Distances Measured from location center)")
     neighborhood = st.text_input("Neighborhood / Area (e.g., 'SoHo, Manhattan, NY')")
+    st.session_state["neighborhood"] = neighborhood 
   ### Initiates when the weather button is pressed. 
   if st.button("Get Weather"):
       if not neighborhood.strip():
@@ -1055,6 +1056,7 @@ st.subheader("Step 2: Weather-smart things to do")
 # make sure we have location + weather in session_state (from Step 1)
 if "wx" not in st.session_state and st.button("Fetch weather again"):
     if "latlon" not in st.session_state:
+        neighborhood = st.session_state.get("neighborhood", "")
         if neighborhood.strip():
             lat, lon = geocode_place(neighborhood)
             st.session_state.latlon = (lat, lon)
