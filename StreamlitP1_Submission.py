@@ -1077,34 +1077,10 @@ elif section == "AI Agent":
       ### Ask the hosted model (OpenRouter); fallback if key missing/unavailable
       try:
           with st.spinner("Asking the AI guide…"):
-            summary = ai_summary_with_openai(neighborhood, wx, picks, shortlist)
+                summary = ai_summary_with_openai(neighborhood, wx, picks, shortlist, model="gpt-3.5-turbo")
             st.success("AI Summary")
             st.write(summary)
-      except Exception:
-          st.warning("AI service unavailable or no API key — showing a quick summary instead.")
-          st.write(
-              f"It’s {wx['description'].lower()} and {wx['temp_f']}°F in {neighborhood}. "
-              f"{rationale} Nearby you’ll find:\n\n{shortlist}\n\n"
-              f"Pick a spot that matches your mood and the weather—enjoy!"
-          )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+except Exception as e:
+    st.warning("AI service unavailable — showing a quick summary instead.")
+    st.caption(f"{type(e).__name__}: {e}") 
+    
