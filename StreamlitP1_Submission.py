@@ -18,7 +18,8 @@ import json
 from openai import OpenAI
 ###_________________________________________________________________________________
 def _get_openai_client():
-    api_key = (st.secrets.get("OPENAI_API_KEY") if hasattr(st, "secrets") else None) or os.getenv("OPENAI_API_KEY")
+    api_key = (st.secrets.get("OPENAI_API_KEY") if hasattr(st, "secrets") else None) \
+              or os.getenv("OPENAI_API_KEY")
     if not api_key or not isinstance(api_key, str) or not api_key.startswith("sk-"):
         raise RuntimeError("OPENAI_API_KEY missing or invalid in secrets/environment.")
     return OpenAI(api_key=api_key)
