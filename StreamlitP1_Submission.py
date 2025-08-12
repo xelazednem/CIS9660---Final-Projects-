@@ -24,7 +24,6 @@ def _get_openai_client():
     if not api_key:
         raise RuntimeError("Missing OPENAI_API_KEY in secrets/environment.")
     return OpenAI(api_key=api_key)
-CLIENT, CLIENT_ERR = get_openai_client()
 REPO_ID = "ZednemXela/df_2024"  
 FILENAME = "df_2024.csv"                       
 REPO_TYPE = "dataset"
