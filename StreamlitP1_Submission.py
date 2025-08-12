@@ -1080,7 +1080,7 @@ elif section == "AI Agent":
                 summary = ai_summary_with_openai(neighborhood, wx, picks, shortlist, model="gpt-3.5-turbo")
             st.success("AI Summary")
             st.write(summary)
-except Exception as e:
-    st.warning("AI service unavailable — showing a quick summary instead.")
-    st.caption(f"{type(e).__name__}: {e}") 
+      except Exception as e:
+        st.warning("AI service unavailable — showing a quick summary instead.")
+        st.caption(f"{type(e).__name__}: {e}") 
     
